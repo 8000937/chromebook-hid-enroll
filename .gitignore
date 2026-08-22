@@ -30,6 +30,8 @@ backend/.settings
 backend/.springBeans
 backend/.sts4-cache
 backend/.mvn/maven-wrapper.properties
+backend/mvnw
+backend/mvnw.cmd
 
 ### IntelliJ IDEA ###
 backend/.idea
