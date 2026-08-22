@@ -42,3 +42,4 @@ backend/*.ipr
 
 ### VS Code ###
 .vscode/
+backend/.mvn/wrapper/maven-wrapper.properties
