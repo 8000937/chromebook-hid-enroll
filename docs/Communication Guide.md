@@ -4,6 +4,7 @@
 * ESP's communicate over MQTT to Backend, Vice Versa (technically, ESP32 -> MQTT Broker -> Backend)
 * Backend communicates to Frontend via websockets
 * Frontend communicates to Backend via API calls.
+* Would be ideal to use something like mDNS or other technology that doesn't require us to hard code an IP, or domain to point toward the API, and the MQTT broker.
 
 ## Entity Specific Notes
 ### Firmware/ESP32
