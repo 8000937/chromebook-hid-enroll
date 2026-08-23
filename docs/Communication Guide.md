@@ -49,6 +49,7 @@
 * Executing - Green/Bright White
 * Identify - Rapid Flashing Blue
 * DO NOT TOUCH (Firmware OTA Update) - Alternate Bright Purple & White (Magenta?)
+* Paused - Flashing Green/Bright White
 
 ### Status IDs
 #### Hardware
@@ -60,6 +61,8 @@
 * Waiting for config - ID# 11
 * Executing - ID# 12
 * Step Completed (Not visible on LED or UI) - ID# 13
+* Paused - ID# 14
+* Resumed - ID# I5
 
 #### Firmware
 * Firmware update error (not sure if this would be a thing since it might be bricked) - ID# -30
