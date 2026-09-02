@@ -47,3 +47,4 @@ backend/.mvn/wrapper/maven-wrapper.properties
 #Mosquitto
 mosquitto/data/
 mosquitto/log/
+firmware/src/settings.h
