@@ -26,8 +26,12 @@ void StatusManager::setStatus(const StatusCode statusCode, const InformationCode
             //IDENT
             statusLed.multipleFlash(blueColor, 2, 200, 0);
             serial.println("IDENTIFY");
-            return;
         }
+        else if (informationCode == InformationCode::NO_WIFI) {
+            statusLed.multipleFlash(redColor, 3, 200, 1500);
+            serial.println("NO WIFI");
+        }
+        return;
     }
     switch (statusCode) {
         //Execution Error

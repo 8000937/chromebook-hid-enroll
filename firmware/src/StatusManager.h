@@ -12,7 +12,7 @@
 
     class StatusManager {
     public:
-        explicit StatusManager(StatusLED& statusLed);
+        // explicit StatusManager(StatusLED& statusLed);
 
         StatusManager(StatusLED &statusLed, Stream &serial);
 
