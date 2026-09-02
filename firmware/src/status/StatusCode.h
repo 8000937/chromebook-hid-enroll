@@ -8,6 +8,7 @@ enum class StatusCode : std::int8_t {
     EXECUTION_ERROR = -10,
     UNEXPECTED_USB_DISCONNECT = -20,
     FIRMWARE_ERROR = -30,
+    START_UP = 0,
     WAITING_FOR_JOB = 10,
     WAITING_FOR_CONFIG = 11,
     EXECUTING = 12,

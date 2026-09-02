@@ -7,7 +7,7 @@
 #include "Adafruit_NeoPixel.h"
 #include "Color.h"
 
-    class StatusLED {
+class StatusLED {
     public:
         StatusLED(const Adafruit_NeoPixel& pixel, Stream& serial, const uint8_t& brightness);
         void turnOff();
