@@ -69,7 +69,9 @@
 * Firmware OTA Update - ID# 30
 
 #### Information / Utilities
-* Identify - ID# 0
+* No WiFi - ID# -1. (? # 7)
+* Identify - ID# 1
+* None - ID# 0. When this status is none, the status manager should show the regular Status LEDs
 
 #### Status ID Design
 * Negative Statuses are Errors
@@ -127,3 +129,4 @@
 4) Do i need to ACK a command?
 5) ~~Set default config step timeout default in firmware/Backend? Should no timeout be allowed?~~ Yes, we should require a timeout. This helps with error detection. 
 6) What does the backend do with ACK of commands? Record it? Is there a flag on the command entity that is checked when its ACKed?
+7) Should normal processing continue with no wifi? If not, do we need to show the wifi status? If we do need to show the wifi status, how do we convey the wifi issue AND show the execution status? Alternate sequences? The no wifi sequence would have to not accidentally be the same as another regular status sequence.
