@@ -19,7 +19,8 @@ const Color redColor(255, 0, 0);
 const Color greenColor(0, 255, 0);
 const Color whiteColor(255, 255, 255);
 const Color purpleColor(60, 0, 100);
-const Color colors[] = {blueColor, redColor};
+// const Color colors[] = {blueColor, redColor};
+const Color jobComplete[] = {blueColor, greenColor};
 const Color pausedColor[] = {greenColor, whiteColor};
 const Color firmwareUpdateColor[] = {purpleColor, whiteColor};
 
@@ -102,6 +103,9 @@ void StatusManager::setStatus(const StatusCode statusCode, const InformationCode
         case StatusCode::FIRMWARE_UPDATE_IN_PROGRESS:
             statusLed.alternateColors(firmwareUpdateColor, 2, 200);
             // serial.println("UPDATE IN PROGRESS");
+            break;
+        case StatusCode::JOB_COMPLETE:
+            statusLed.alternateColors(jobComplete, 2, 200);
             break;
         default:
             break;
