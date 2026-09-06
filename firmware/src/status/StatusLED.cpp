@@ -47,7 +47,7 @@ void StatusLED::alternateColors(const Color *colors, const uint8_t &colorSize, c
      */
 
     if (lastAlternateColorIndex == 0) {
-        serial->printf("showing color in the %d position\n", lastAlternateColorIndex);
+        // serial->printf("showing color in the %d position\n", lastAlternateColorIndex);
         showColor(colors[lastAlternateColorIndex]);
 
         isOn = true;
@@ -60,12 +60,12 @@ void StatusLED::alternateColors(const Color *colors, const uint8_t &colorSize, c
         lastAlternateTime = millis();
     } else if (lastAlternateColorIndex > 0 && millis() - lastAlternateTime >= speed) {
         if (isOn) {
-            serial->println("turning off");
+            // serial->println("turning off");
             turnOff();
             isOn = false;
             lastAlternateTime = millis();
         } else {
-            serial->printf("2- showing color in the %d position\n", lastAlternateColorIndex);
+            // serial->printf("2- showing color in the %d position\n", lastAlternateColorIndex);
             showColor(colors[lastAlternateColorIndex]);
             isOn = true;
             if (lastAlternateColorIndex == colorSize) {
