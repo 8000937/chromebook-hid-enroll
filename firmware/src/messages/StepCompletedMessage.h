@@ -5,21 +5,32 @@
 #ifndef FIRMWARE_STEPCOMPLETEDMESSAGE_H
 #define FIRMWARE_STEPCOMPLETEDMESSAGE_H
 #include "StatusMessage.h"
-
 struct StepCompletedMessage : StatusMessage {
-    unsigned long msSpentOnTask = 0;
-    bool isAutomated = false;
+private:
+    StatusMessage message;
 
-    StepCompletedMessage(StatusMessage& message, unsigned long msSpentOnTask, bool isAutomated) {
-        this->informationCode = message.informationCode;
-        this->statusCode = message.statusCode;
-        this->clientId = message.clientId;
-        this->configVersion = message.configVersion;
-        this->firmwareVersion = message.firmwareVersion;
-        this->jobId = message.jobId;
-        this->stepNumber = message.stepNumber;
+public:
+    unsigned long msSpentOnTask = 0;
+    bool requiresHumanInput = false;
+
+
+    StepCompletedMessage(const StatusMessage& msg, unsigned long msSpentOnTask, bool requiresHumanInput) : message(msg) {
+        this->informationCode = msg.informationCode;
+        this->statusCode = msg.statusCode;
+        this->clientId = msg.clientId;
+        this->configVersion = msg.configVersion;
+        this->firmwareVersion = msg.firmwareVersion;
+        this->jobId = msg.jobId;
+        this->stepNumber = msg.stepNumber;
         this->msSpentOnTask = msSpentOnTask;
-        this->isAutomated = isAutomated;
+        this->requiresHumanInput = requiresHumanInput;
+    }
+
+    JsonDocument toJson() {
+        JsonDocument doc = message.toJson();
+        doc["msSpentOnTask"] = msSpentOnTask;
+        doc["requiresHumanInput"] = requiresHumanInput;
+        return doc;
     }
 };
 #endif //FIRMWARE_STEPCOMPLETEDMESSAGE_H

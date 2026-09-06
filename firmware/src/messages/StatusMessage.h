@@ -4,7 +4,7 @@
 
 #ifndef FIRMWARE_STATUSMESSAGE_H
 #define FIRMWARE_STATUSMESSAGE_H
-
+#include <ArduinoJson.h>
 #include <WString.h>
 
 struct StatusMessage{
@@ -15,6 +15,18 @@ struct StatusMessage{
     int16_t configVersion;
     String firmwareVersion;
     String clientId;
+
+    JsonDocument toJson() {
+        JsonDocument doc;
+        doc["statusCode"] = statusCode;
+        doc["informationCode"] = informationCode;
+        doc["stepNumber"] = stepNumber;
+        doc["jobId"] = jobId;
+        doc["configVersion"] = configVersion;
+        doc["firmwareVersion"] = firmwareVersion;
+        doc["clientId"] = clientId;
+        return doc;
+    }
  };
 
 #endif //FIRMWARE_STATUSMESSAGE_H
