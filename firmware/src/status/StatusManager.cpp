@@ -7,7 +7,10 @@
 #include "InformationCode.h"
 #include "StatusCode.h"
 
-StatusManager::StatusManager(StatusLED &statusLed, Stream& serial) : statusLed(statusLed), serial(serial) {
+StatusManager::StatusManager(StatusLED& statusLed, Stream& serial) : statusLed(statusLed), serial(serial) {
+}
+
+StatusManager::StatusManager(const Adafruit_NeoPixel &led, Stream &serial) : statusLed(StatusLED(led, serial, 50)), serial(serial) {
 }
 
 const Color amberColor(215, 80, 50);

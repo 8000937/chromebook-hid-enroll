@@ -13,14 +13,15 @@
 class StatusManager {
     public:
         typedef std::function<void(InformationCode newInfoCode, InformationCode oldInfoCode, StatusCode newStatusCode, StatusCode oldStatusCode)> StatusChangeEventCb;
-        StatusManager(StatusLED &statusLed, Stream &serial);
+        StatusManager(StatusLED& statusLed, Stream &serial);
+        StatusManager(const Adafruit_NeoPixel& led, Stream &serial);
         void onStatusChange(StatusChangeEventCb statusCodeChangeHook);
 
 
         void setStatus(StatusCode statusCode, InformationCode informationCode = InformationCode::NONE);
 
     private:
-        StatusLED& statusLed;
+        StatusLED statusLed;
         Stream& serial;
 
         InformationCode currentInformationCode = InformationCode::NONE;
