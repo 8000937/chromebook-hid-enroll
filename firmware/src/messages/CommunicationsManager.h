@@ -5,21 +5,49 @@
 #ifndef FIRMWARE_COMMUNICATIONSMANAGER_H
 #define FIRMWARE_COMMUNICATIONSMANAGER_H
 #include <Stream.h>
-
+#include <WiFiClient.h>
+#include <espMqttClient.h>
 #include "StatusMessage.h"
 #include "StepCompletedMessage.h"
 
 
 class CommunicationsManager {
     public:
-        CommunicationsManager(Stream& serial);
-        void sendInformationStatusChange(StatusMessage message);
-        void sendStatusChange(StatusMessage message);
-        void registerDevice(StatusMessage message);
-        void stepCompleted(StepCompletedMessage message);
+        CommunicationsManager(Stream& serial, const String& clientId);
+        uint16_t sendInformationStatusChange(StatusMessage& message);
+        uint16_t sendStatusChange(StatusMessage& message);
+        uint16_t registerDevice(StatusMessage& message);
+        uint16_t stepCompleted(StepCompletedMessage& message);
+        bool connectToMQTT();
+    bool setupSubscriptions();
+        void disconnectMQTT();
+        bool isMqttConnected() const;
+        bool reconnectMqtt(StatusMessage& registerMessage);
+
     private:
+        static CommunicationsManager* instance;
         Stream& serial;
-};
+        espMqttClient mqttClient;
+        WiFiClient wifiClient;
+        String clientId;
+        unsigned long lastConnectionAttempt = 0;
+        bool shouldReconnect = true;
+
+        uint16_t sendStringOverMqtt(const String& topic, const String& message, const String& src = "");
+
+
+        static void onMqttConnect(bool sessionPresent);
+        static void onMqttDisconnect(espMqttClientTypes::DisconnectReason reason);
+        static void onMqttSubscribe(uint16_t packetId, const espMqttClientTypes::SubscribeReturncode* codes, size_t len);
+        static void onMqttUnsubscribe(uint16_t packetId);
+        static void onMqttMessage(const espMqttClientTypes::MessageProperties& properties, const char* topic, const uint8_t* payload, size_t len, size_t index, size_t total);
+
+        static void onMqttPublish(uint16_t packetId);
+
+
+
+        // static void receiveFromMQTT(const char* topic, const uint8_t* payload, unsigned int length);
+ };
 
 
 #endif //FIRMWARE_COMMUNICATIONSMANAGER_H
