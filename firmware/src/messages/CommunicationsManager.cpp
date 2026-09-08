@@ -4,6 +4,7 @@
 
 #include "CommunicationsManager.h"
 
+#include "ControlMessage.h"
 #include "settings.h"
 CommunicationsManager* CommunicationsManager::instance = nullptr;
 
@@ -30,11 +31,21 @@ bool CommunicationsManager::reconnectMqtt(StatusMessage& registerMessage) {
     }
     const bool connected = connectToMQTT();
     if (connected) {
+        setupWill();
         setupSubscriptions();
         registerDevice(registerMessage);
     }
     // serial.printf("Reconnecting to MQTT broker failed. Reason: %d\n", this->mqttClient.);
     return false;
+}
+
+void CommunicationsManager::setupWill() {
+    ControlMessage willMessage;
+    willMessage.clientId = instance->clientId;
+    willMessage.command = ControlCode::DEREGISTER;
+    String jsonString;
+    serializeJson(willMessage.toJson(),jsonString);
+    instance->mqttClient.setWill(App::Settings::control_topic.c_str(), 2,true, jsonString.c_str());
 }
 
 uint16_t CommunicationsManager::sendInformationStatusChange(StatusMessage& message) {

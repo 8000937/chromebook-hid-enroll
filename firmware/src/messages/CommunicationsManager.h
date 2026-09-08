@@ -35,6 +35,8 @@ class CommunicationsManager {
 
         uint16_t sendStringOverMqtt(const String& topic, const String& message, const String& src = "");
 
+        // use the will to broadcast to the "fleet manager" that this device is no longer active.
+        static void setupWill() ;
 
         static void onMqttConnect(bool sessionPresent);
         static void onMqttDisconnect(espMqttClientTypes::DisconnectReason reason);
