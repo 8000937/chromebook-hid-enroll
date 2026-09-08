@@ -17,12 +17,16 @@ class StatusManager {
         StatusManager(const Adafruit_NeoPixel& led, Stream &serial);
         void onStatusChange(StatusChangeEventCb statusCodeChangeHook);
 
+        void signalExecutionPaused(bool pause);
 
         void setStatus(StatusCode statusCode, InformationCode informationCode = InformationCode::NONE);
 
     private:
         StatusLED statusLed;
         Stream& serial;
+
+        // used to stop subsequent status led updates when the underlying status changes (IE usb unplugged, etc) and the execution is paused.
+        volatile bool skipStatusChangeLEDUpdates = false;
 
         InformationCode currentInformationCode = InformationCode::NONE;
         StatusCode currentStatusCode = StatusCode::START_UP;

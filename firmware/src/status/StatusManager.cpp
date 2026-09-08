@@ -28,6 +28,16 @@ void StatusManager::onStatusChange(StatusChangeEventCb statusChangeEventHookCb) 
     this->statusChangeEventCb = std::move(statusChangeEventHookCb);
 }
 
+void StatusManager::signalExecutionPaused(const bool pause) {
+    if (pause) {
+        statusLed.alternateColors(pausedColor, 2, 200);
+        skipStatusChangeLEDUpdates = true;
+    }
+    else {
+        skipStatusChangeLEDUpdates = false;
+    }
+}
+
 void StatusManager::setStatus(const StatusCode statusCode, const InformationCode informationCode) {
     // handle callback if any
     if (statusCode != currentStatusCode || informationCode != currentInformationCode) {
@@ -38,11 +48,15 @@ void StatusManager::setStatus(const StatusCode statusCode, const InformationCode
         this->currentStatusCode = statusCode;
         this->currentInformationCode = informationCode;
     }
+    if (skipStatusChangeLEDUpdates) {
+        return;
+    }
     /* handle led change. I have contemplated putting this in the above if statement,
      * so it only actually does this work if there is something to change. There would be a problem if the led could be
      * changed by something else, but if we keep this class, that shouldn't be possible.
      * Further research needed.
     */
+
     //handle information code changes and return if its not NONE. This is done so the information code overrides status code
     if (informationCode != InformationCode::NONE) {
         if (informationCode == InformationCode::IDENTIFY) {
@@ -89,15 +103,6 @@ void StatusManager::setStatus(const StatusCode statusCode, const InformationCode
         // step completed
         case StatusCode::STEP_COMPLETED:
             // serial.println("STEP COMPLETED NO LED");
-            break;
-        // paused
-        case StatusCode::PAUSED:
-            statusLed.alternateColors(pausedColor, 2, 200);
-            // serial.println("PAUSED");
-            break;
-        // resumed
-        case StatusCode::RESUMED:
-            // serial.println("RESUMED NO LED");
             break;
         // firmware update in progress
         case StatusCode::FIRMWARE_UPDATE_IN_PROGRESS:

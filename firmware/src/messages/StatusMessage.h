@@ -15,6 +15,7 @@ struct StatusMessage{
     int16_t configVersion;
     String firmwareVersion;
     String clientId;
+    bool paused;
 
     JsonDocument toJson() {
         JsonDocument doc;
@@ -25,6 +26,7 @@ struct StatusMessage{
         doc["configVersion"] = configVersion;
         doc["firmwareVersion"] = firmwareVersion;
         doc["clientId"] = clientId;
+        doc["paused"] = paused;
         return doc;
     }
  };

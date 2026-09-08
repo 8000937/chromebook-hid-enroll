@@ -24,6 +24,7 @@ public:
         this->stepNumber = msg.stepNumber;
         this->msSpentOnTask = msSpentOnTask;
         this->requiresHumanInput = requiresHumanInput;
+        this->paused = msg.paused;
     }
 
     JsonDocument toJson() {

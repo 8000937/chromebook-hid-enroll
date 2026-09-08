@@ -33,24 +33,26 @@ static unsigned long timeStartedCurrentStep = 0;
 static int8_t stepNumber = -1;
 static int16_t jobId = -1;
 static int16_t configVersion = -1;
-
+//TODO current bug is the reported step number is the current stepNumber +1; not the actual step number.
 
 // placeholder test steps.
 static ExecutionStep executionSteps[] = {
     ExecutionStep(0, ExecutionStepType::WAIT_FOR_USB_CONNECT, "", nullptr, 0, false, 0, 1000, false),
-    ExecutionStep(1, ExecutionStepType::DELAY, "", nullptr, 0, false, 10000, 10000, false),
-    ExecutionStep(2, ExecutionStepType::TYPE_STRING, "Hello World", nullptr, 0, false, 0, 10000, false)
+    ExecutionStep(1, ExecutionStepType::DELAY, "", nullptr, 0, false, 20000, 20000, false),
+    ExecutionStep(2, ExecutionStepType::WAIT_FOR_USB_DISCONNECT, "", nullptr, 0, false, 0, 100000, false),
+    ExecutionStep(3, ExecutionStepType::WAIT_FOR_USB_CONNECT, "", nullptr, 0, false, 0, 100000, false),
+    ExecutionStep(4, ExecutionStepType::TYPE_STRING, "Hello World", nullptr, 0, false, 0, 10000, false)
 };
-static uint8_t stepCount = 3;
+static uint8_t stepCount = 5;
 
 // controller state
 static volatile bool running = true;
+static volatile bool paused = false;
 const String firmwareVersion = "0.0.1";
 
 // timing
 static unsigned long timer = 0;
 constexpr unsigned long executionDelay = 200;
-
 
 void onWiFiConnected(WiFiEvent_t event, WiFiEventInfo_t info) {
 
@@ -77,6 +79,7 @@ static void updateCurrentStatusDetails() {
     currentStatusDetails.configVersion = configVersion;
     currentStatusDetails.jobId = jobId;
     currentStatusDetails.stepNumber = stepNumber;
+    currentStatusDetails.paused = !(running && !paused);
 }
 void onStatusChange(InformationCode newInfoCode, InformationCode oldInfoCode, StatusCode newStatusCode, StatusCode oldStatusCode)
 {
@@ -96,6 +99,7 @@ void onStatusChange(InformationCode newInfoCode, InformationCode oldInfoCode, St
             //TODO i think this stepCompleted thing could also represent a execution failed status. maybe make this more general
             StepCompletedMessage msg(currentStatusDetails, millis()-timeStartedCurrentStep, false);
             communicationsManager.stepCompleted(msg);
+            timeStartedCurrentStep = millis();
         }
         else {
             communicationsManager.sendStatusChange(currentStatusDetails);
@@ -110,7 +114,7 @@ void onStatusChange(InformationCode newInfoCode, InformationCode oldInfoCode, St
 
         // send register command
         if (newInfoCode == InformationCode::NONE && oldInfoCode == InformationCode::NO_WIFI) {
-            communicationsManager.registerDevice(currentStatusDetails);
+            communicationsManager.registerDevice();
         }
         else {
             communicationsManager.sendInformationStatusChange(currentStatusDetails);
@@ -125,6 +129,34 @@ static void usbEventCallback(void *arg, esp_event_base_t event_base, int32_t eve
     usbManager.usbStatusCallback(arg, event_base, event_id, event_data);
 }
 
+// only receives messages when the client id matches ours.
+static void onControlMessageReceived(const ControlMessage& controlMessage) {
+    // controlMessage.
+    serial.printf("Control Message Received: %i\n", static_cast<int>(controlMessage.command));
+    if (ControlCode::PAUSE == controlMessage.command) {
+        paused = true;
+        updateCurrentStatusDetails();
+        communicationsManager.sendStatusChange(currentStatusDetails);
+    }
+    else if (ControlCode::RESUME == controlMessage.command) {
+        // used to make this idempotent. if you send a resume when not paused, it doesnt do anything.
+        // setting the paused flag to false when its already false, and then sending a status update is no biggie.
+        if (paused == true)
+        {
+            // restart current step.
+            executionManager.resetState();
+        }
+        paused = false;
+        updateCurrentStatusDetails();
+        communicationsManager.sendStatusChange(currentStatusDetails);
+
+    }
+}
+
+void resetProgramState() {
+    executionManager.resetState();
+    stepNumber = -1;
+}
 
 void setup() {
     Serial.begin(115200);
@@ -153,6 +185,9 @@ void setup() {
     WiFi.begin(App::Settings::ssid.c_str(), App::Settings::password.c_str());
 
     informationStatus = InformationCode::NO_WIFI;
+
+    communicationsManager.onControlMessageReceived(onControlMessageReceived);
+
 }
 
 
@@ -173,18 +208,19 @@ void loop() {
 
     if ((millis() - timer) % 1000 <= 999) {
         if (!usbManager.isConnected()) {
-            // TODO should this reset the step we're on?
-            statusCode = StatusCode::UNEXPECTED_USB_DISCONNECT;
-            running = false;
-        }
-        if (!running || statusCode == StatusCode::EXECUTION_ERROR) {
-            // TODO fix this -- doesnt print negative statuses well.. and these are all negative.
-            serial.printf("Program halted: %i\n", static_cast<int>(statusCode));
+            if (stepNumber >= 0 && (executionSteps[stepNumber].type == ExecutionStepType::WAIT_FOR_USB_DISCONNECT || executionSteps[stepNumber].type == ExecutionStepType::WAIT_FOR_USB_CONNECT)) {
+                // do nothing. this is planned.
+            }
+            else {
+                statusCode = StatusCode::UNEXPECTED_USB_DISCONNECT;
+                resetProgramState();
+                running = false;
+            }
         }
     }
 
     // main execution loop
-    if (statusCode != StatusCode::EXECUTION_ERROR && running && (timer == 0 || millis() - timer > executionDelay)) {
+    if (statusCode != StatusCode::EXECUTION_ERROR && running && !paused && (timer == 0 || millis() - timer > executionDelay)) {
         if (stepNumber == -1 && stepCount > 0) {
             stepNumber = 0;
             updateCurrentStatusDetails();
@@ -209,6 +245,23 @@ void loop() {
         timer = millis();
     }
 
+
+    /*
+    a bug is found here. If you pause during a step that uses a timer (IE: Delay, timeouts),
+     the execution will not resume with, for example, the same 200ms from when you initially paused it.
+     Unknown if this is an issue.
+     Not sure if I explain that well, but basically, it doesnt pause the delay/timer.
+     Potential remedy is calculating how much of the delay has passed at the time of the pause, and then keep updating
+     the timer with the current time minus the part of the delay that has already passed.
+     OR
+     Just re-run the step.
+
+     Presumably this problem also applies to timeouts.
+
+     BG -- ended up making it start the current step over again when resumed, though, i do like the idea of just updating the time to current time minus elapsed delay, but that creates its own issues.
+     Use pause/resume sparingly.
+    */
+    statusManager.signalExecutionPaused(paused);
 
     // Test to show realtime status changes and confirm it works as expected.
     statusManager.setStatus(statusCode, informationStatus);

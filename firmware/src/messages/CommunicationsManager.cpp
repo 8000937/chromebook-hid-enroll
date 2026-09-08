@@ -22,31 +22,37 @@ CommunicationsManager::CommunicationsManager(Stream& serial, const String& clien
     instance->mqttClient.setClientId(clientId.c_str());
 };
 
-bool CommunicationsManager::reconnectMqtt(StatusMessage& registerMessage) {
+void CommunicationsManager::onControlMessageReceived(ControlMessageCallback message) {
+    this->onControlMessageReceivedCb = std::move(message);
+}
+
+bool CommunicationsManager::reconnectMqtt(StatusMessage& initialStatusMessage) {
     if (shouldReconnect && millis() - lastConnectionAttempt > 10000) {
         lastConnectionAttempt = millis();
     }
     else {
         return this->mqttClient.connected();
     }
-    const bool connected = connectToMQTT();
+    volatile bool connected = instance->connectToMQTT();
     if (connected) {
-        setupWill();
-        setupSubscriptions();
-        registerDevice(registerMessage);
+        // TODO need to look at this further. It does not see that is connected, and it doesnt end up sending the subscriptions.
+        // seems better to just add it to the onConnect event hook, but this means we dont initialize the status.
+        // setupWill();
+        // instance->setupSubscriptions();
+        // instance->registerDevice();
+        instance->sendStatusChange(initialStatusMessage);
     }
     // serial.printf("Reconnecting to MQTT broker failed. Reason: %d\n", this->mqttClient.);
-    return false;
+    return connected;
 }
 
 void CommunicationsManager::setupWill() {
-    ControlMessage willMessage;
-    willMessage.clientId = instance->clientId;
-    willMessage.command = ControlCode::DEREGISTER;
+    const ControlMessage willMessage(instance->clientId, ControlCode::DEREGISTER);
     String jsonString;
     serializeJson(willMessage.toJson(),jsonString);
     instance->mqttClient.setWill(App::Settings::control_topic.c_str(), 2,true, jsonString.c_str());
 }
+
 
 uint16_t CommunicationsManager::sendInformationStatusChange(StatusMessage& message) {
     String jsonString;
@@ -66,16 +72,19 @@ uint16_t CommunicationsManager::stepCompleted(StepCompletedMessage& message) {
     return this->sendStringOverMqtt(App::Settings::status_topic.c_str(),jsonString, "Step Completed");
 }
 
-uint16_t CommunicationsManager::registerDevice(StatusMessage& message) {
+uint16_t CommunicationsManager::registerDevice() {
+    const ControlMessage registerMessage(instance->clientId, ControlCode::REGISTER);
     String jsonString;
-    serializeJson(message.toJson(),jsonString);
+    serializeJson(registerMessage.toJson(),jsonString);
     const uint16_t packetId = this->sendStringOverMqtt(App::Settings::register_topic.c_str(),jsonString, "Register Device");
     return packetId;
 }
 
 bool CommunicationsManager::setupSubscriptions() {
+    serial.println("Attempting to setup subscriptions...");
+    serial.printf("instance is null? %d Is MQTT Connected? %d\n", instance == nullptr, this->mqttClient.connected());
     if (instance != nullptr && this->mqttClient.connected()) {
-        serial.printf("Attempting to subscribe to %s...\n", App::Settings::control_topic.c_str());
+        instance->serial.printf("Attempting to subscribe to %s...\n", App::Settings::control_topic.c_str());
         const bool result = this->mqttClient.subscribe(App::Settings::control_topic.c_str(),2);
         if (!result) {
             serial.printf("Failed to subscribe to %s...", App::Settings::control_topic.c_str());
@@ -90,8 +99,8 @@ bool CommunicationsManager::setupSubscriptions() {
 
 bool CommunicationsManager::connectToMQTT() {
     serial.printf("Connecting to MQTT broker...\n");
-    const bool result = this->mqttClient.connect();
-    serial.printf("Connected to MQTT broker? %d\n", this->mqttClient.connected());
+    volatile bool result = instance->mqttClient.connect();
+    serial.printf("Connected to MQTT broker? %d\n", instance->mqttClient.connected());
     if (result) {
         shouldReconnect = false;
     }
@@ -117,10 +126,12 @@ bool CommunicationsManager::isMqttConnected() const {
 // TMP
 
 void CommunicationsManager::onMqttConnect(bool sessionPresent) {
-  instance->serial.println("Connected to MQTT.");
-  instance->serial.print("Session present: ");
-  instance->serial.println(sessionPresent);
-
+    instance->serial.println("Connected to MQTT.");
+    instance->serial.print("Session present: ");
+    instance->serial.println(sessionPresent);
+    setupWill();
+    instance->setupSubscriptions();
+    instance->registerDevice();
   /*uint16_t packetIdSub = instance->mqttClient.subscribe("foo/bar", 2);
   instance->serial.print("Subscribing at QoS 2, packetId: ");
   instance->serial.println(packetIdSub);
@@ -169,7 +180,25 @@ void CommunicationsManager::onMqttUnsubscribe(uint16_t packetId) {
 }
 
 void CommunicationsManager::onMqttMessage(const espMqttClientTypes::MessageProperties& properties, const char* topic, const uint8_t* payload, size_t len, size_t index, size_t total) {
-  (void) payload;
+  // (void) payload;
+        if (strcmp(topic, App::Settings::control_topic.c_str()) == 0) {
+        const char* payloadStr = reinterpret_cast<const char*>(payload);
+        instance->serial.println(payloadStr);
+        JsonDocument controlMsg;
+        const DeserializationError error = deserializeJson(controlMsg, payloadStr);
+        if (error) {
+            instance->serial.println(error.c_str());
+            instance->serial.println("error deserializing control message");
+        }
+        else {
+            // only pass on a control message if it is scoped to us. May need to do some normalization of the client id.
+            // if the client id arrives in lower case, this wont work.
+            const ControlMessage actualControlMessage = ControlMessage::fromJson(controlMsg);
+            if (instance->clientId == actualControlMessage.clientId && instance->onControlMessageReceivedCb != nullptr) {
+                instance->onControlMessageReceivedCb(actualControlMessage);
+            }
+        }
+    }
   instance->serial.println("Publish received.");
   instance->serial.print("  topic: ");
   instance->serial.println(topic);

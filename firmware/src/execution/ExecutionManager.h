@@ -15,9 +15,9 @@ class ExecutionManager {
 public:
     ExecutionManager(USBHIDKeyboard& _keyboard, UsbManager& usbManager, Stream& serial);
     ExecutionStatus execute(const ExecutionStep& step);
+    void resetState();
 
 private:
-    void resetState();
     long previousStepId = -1;
     unsigned long timer = millis();
 
