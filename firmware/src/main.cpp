@@ -204,7 +204,7 @@ void loop() {
         }
         // if no errors, steps are defined, and we're at the end.
         else if (stepCount > 0 && stepNumber == stepCount) {
-                statusCode = StatusCode::JOB_COMPLETE;
+                statusCode = StatusCode::EXECUTION_COMPLETE;
         }
         timer = millis();
     }

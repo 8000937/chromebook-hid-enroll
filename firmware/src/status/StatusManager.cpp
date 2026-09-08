@@ -104,7 +104,7 @@ void StatusManager::setStatus(const StatusCode statusCode, const InformationCode
             statusLed.alternateColors(firmwareUpdateColor, 2, 200);
             // serial.println("UPDATE IN PROGRESS");
             break;
-        case StatusCode::JOB_COMPLETE:
+        case StatusCode::EXECUTION_COMPLETE:
             statusLed.alternateColors(jobComplete, 2, 200);
             break;
         default:
