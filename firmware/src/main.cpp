@@ -33,7 +33,6 @@ static unsigned long timeStartedCurrentStep = 0;
 static int8_t stepNumber = -1;
 static int16_t jobId = -1;
 static int16_t configVersion = -1;
-//TODO current bug is the reported step number is the current stepNumber +1; not the actual step number.
 
 // placeholder test steps.
 static ExecutionStep executionSteps[] = {
@@ -72,13 +71,14 @@ void onWiFiDisconnected(WiFiEvent_t event, WiFiEventInfo_t info) {
 
     WiFi.begin(App::Settings::ssid.c_str(), App::Settings::password.c_str());
 }
-
 static void updateCurrentStatusDetails() {
     currentStatusDetails.informationCode = static_cast<int8_t>(informationStatus);
     currentStatusDetails.statusCode = static_cast<int8_t>(statusCode);
     currentStatusDetails.configVersion = configVersion;
     currentStatusDetails.jobId = jobId;
-    currentStatusDetails.stepNumber = stepNumber;
+
+    // we subtract 1 because the timing of incrementing stepNumber and sending the status update out.
+    currentStatusDetails.stepNumber = static_cast<int8_t>(stepNumber-1);
     currentStatusDetails.paused = !(running && !paused);
 }
 void onStatusChange(InformationCode newInfoCode, InformationCode oldInfoCode, StatusCode newStatusCode, StatusCode oldStatusCode)
@@ -231,16 +231,18 @@ void loop() {
             const ExecutionStatus execStatus = executionManager.execute(executionSteps[stepNumber]);
             if ( ExecutionStatus::COMPLETE == execStatus) {
                 statusCode = StatusCode::STEP_COMPLETED;
-                stepNumber++;
                 updateCurrentStatusDetails();
+                stepNumber++;
             }
             else if (ExecutionStatus::TIMED_OUT == execStatus) {
                 statusCode = StatusCode::EXECUTION_ERROR;
+                updateCurrentStatusDetails();
             }
         }
         // if no errors, steps are defined, and we're at the end.
         else if (stepCount > 0 && stepNumber == stepCount) {
-                statusCode = StatusCode::EXECUTION_COMPLETE;
+            statusCode = StatusCode::EXECUTION_COMPLETE;
+            updateCurrentStatusDetails();
         }
         timer = millis();
     }
@@ -269,5 +271,6 @@ void loop() {
     // just a workaround to let us send the status update, and not lose the actual status.
     if (StatusCode::STEP_COMPLETED == statusCode) {
         statusCode = StatusCode::EXECUTING;
+        updateCurrentStatusDetails();
     }
 }
